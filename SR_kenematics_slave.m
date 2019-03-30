@@ -10,8 +10,14 @@ RotZ     =  @(theta)([cos(theta) -sin(theta) 0
                       sin(theta)  cos(theta) 0
                           0           0      1]);
                       
-                      
-jointPos =  [10 30 0.1*pi/180 100 40 50]/180*pi;
+Jw       = zeros(3,6);
+Jv       = zeros(3,6);
+
+sampleTime = 0.01;
+jointPos =  [0 0 0*180/pi 0 0 0]/180*pi;
+output_v = zeros(3,1000);
+output_p = zeros(3,1000);
+output_w = zeros(3,1000);
 %%%%%%%%%%%%%%%%%%%各坐标系初始旋转矩阵%%%%%%%%%%%%%%%%
 R01_orl  =  [       0     1      0
               sin(theta1) 0 cos(theta1)
@@ -45,6 +51,9 @@ P56_orl  =  [0 -length(6) 0]';
 P6t_orl  =  [0 0 0]';
 
 %%%%%%%%%%%%%%各坐标系相对基坐标系的旋转矩阵%%%%%%%%%%%%%%%%
+v      = 2/180*pi;
+ for i = 1:10/sampleTime
+     jointPos(2) = jointPos(2) + v*0.01;
 R01     = R01_orl;                         %%坐标系1相对坐标系0的旋转矩阵
 R02     = R01*RotZ(jointPos(1))*R12_orl;   %%坐标系2相对坐标系0的旋转矩阵
 R03     = R02*RotZ(jointPos(2))*R23_orl;
@@ -62,4 +71,38 @@ P05    = P04 + R04*RotZ(jointPos(4))*P45_orl;
 P06    = P05 + R05*RotZ(jointPos(5))*P56_orl;
 P0t    = P06 + R06*RotZ(jointPos(6))*P6t_orl;
 
+output_p(:,i) = P0t;
+output_p3(:,i) = P03;
+output_p4(:,i) = P04;
 %%%%%%%%%%%%%%%%%运动学：雅克比矩阵求解%%%%%%%%%%%%%%%%%
+%%%%%%%目标坐标系At的速度/角速度由之前的A1~A6所有坐标系的运动叠加得到%%%%%%%%
+%%%%%%%wt = w1 + w2 + w3 + w4 + w5 + w6
+%%%%%%%vt = w1×P17 + w2×P27 + v3 + w4×P47 + w5×P57 + w6×P67 
+Ez     = [0 0 1]';
+Jw(:,1)  = R01*Ez;
+Jw(:,2)  = R02*Ez;
+Jw(:,3)  = zeros(3,1);%关节3为移动关节
+Jw(:,4)  = R04*Ez;
+Jw(:,5)  = R05*Ez;
+Jw(:,6)  = R06*Ez;
+
+Jv(:,1)  = cross(Jw(:,1),(P0t - P01));
+Jv(:,2)  = cross(Jw(:,2),(P0t - P02));
+Jv(:,3)  = R03*Ez;%关节3为移动关节
+Jv(:,4)  = cross(Jw(:,4),(P0t - P04));
+Jv(:,5)  = cross(Jw(:,5),(P0t - P05));
+Jv(:,6)  = cross(Jw(:,6),(P0t - P06));
+
+jacobian = [Jv ; Jw];
+
+V        = [0 v 0 0 0 0]';  
+Vt       = jacobian * V;
+vt       = Vt(1:3);
+wt       = Vt(4:6);
+
+output_v(:,i) = vt;
+end
+%%%%%%%%%%%机械臂运动显示%%%%%%%%%%%
+% plot3([0,P01(1),P02(1),P03(1)],[0,P01(2),P02(2),P03(2)],[0,P01(3),P02(3),P03(3)],'LineWidth',3);
+% grid on;
+% xlabel('x(m)');  ylabel('y(m)');  zlabel('z(m)');
