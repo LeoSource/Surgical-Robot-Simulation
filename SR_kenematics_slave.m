@@ -106,3 +106,5 @@ end
 % plot3([0,P01(1),P02(1),P03(1)],[0,P01(2),P02(2),P03(2)],[0,P01(3),P02(3),P03(3)],'LineWidth',3);
 % grid on;
 % xlabel('x(m)');  ylabel('y(m)');  zlabel('z(m)');
+
+%C:\Users\Zhixi\Documents\GitHub\Surgical-Robot-Simulation
