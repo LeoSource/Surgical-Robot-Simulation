@@ -17,7 +17,33 @@ Jv       = zeros(3,6);
 %jointPos =  [0 -50 0*180/pi 0 0 0]/180*pi;
 % jointPos =  [-0.0813875347, 0.2458874, 0.237897024, -0.0495979339, -0.28532213, -0.5105175]; %normal running
 %jointPos =  [-0.101581164, 0.277775526, 0.235600367, -0.170704067, -1.2165035, -0.6427434]; %abnormal posture
-jointPos =  [-0.06845582, 0.277778, 0.233889028, 0.15274711, -1.65579963, -0.442598224]; %SVD validate
+TIME = 0.5;
+VMAX = 0.12;
+jointPos =  [-0.0, 0, 0, 0, 0, 0]'; 
+jointVel = [ 0, 0, 0, 0, 0, 0 ]';
+i = 0;
+for time = 0:0.001:3
+    i = i + 1;
+    if time < TIME
+        jointVel(3) = VMAX / TIME * time;
+    elseif (time <= 2.5) && (time >= 0.5)
+        jointVel(3) = VMAX;
+    elseif (time > 2.5) && (time <= 3)
+        jointVel(3) = -VMAX/TIME * (time - 3);
+    end
+
+    jointPos = jointPos + jointVel * 0.001;
+%%%%%%%%%%%%%%%%%%%%%%%%%singular configuration%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%1. The joint3 is at the maximum position(0.338+0.009), then joint2 and joint5
+%   have the same coordinate system;
+%2. The joint2 is at the position of -120degree, then the slave loses the
+%   velocity of x direction;
+%3. The slave configuration is [-0.06845582, 0.277778, 0.233889028, 0.15274711,
+%   -1.65579963, -0.442598224], then the end-effctor is at the extension 
+%   line of  joint1 direction, that causes the slave loses the velocity of
+%   x direction.
+%%%%%%%%%%%%%%%%%%%%%%%singular configuration%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %%%%%%%%%%%%%%%%%%%各坐标系初始旋转矩阵%%%%%%%%%%%%%%%%
 R01_orl  =  [       0     1      0
               sin(theta1) 0 cos(theta1)
@@ -88,7 +114,7 @@ Jv(:,5)  = cross(Jw(:,5),(P0t - P05));
 Jv(:,6)  = cross(Jw(:,6),(P0t - P06));
 
 jacobian = [Jv ; Jw];
-
+cartVel_tmp = jacobian * jointVel;
 %%%%abnormal posture
 %errCartVel = [ -0.159515023, 2.12388039, 0.419873, 0.4929581, 0.0461047664, 0.004384071 ]';
 %tarCartVel = [ -0.00669588242, -0.0135961426, 0.0153179374, 0.2232777, 0.08158365, -0.560607851 ]';
@@ -104,6 +130,9 @@ baseJointVel = pinv(jacobian) * refCartVel;
 [U,S,V] = svd(jacobian);
 
 
+    cartVel(:,i) = cartVel_tmp;
+    cartPos(:,i) = P0t;
+end
 
 
 
