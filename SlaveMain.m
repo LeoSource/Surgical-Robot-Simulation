@@ -1,5 +1,5 @@
-clc
 clear
+clc
 
 %%%%%%%%%%%%%变量定义%%%%%%%%%%
 global R01_orl R12_orl R23_orl R34_orl R45_orl R56_orl R6t_orl
@@ -242,31 +242,51 @@ nothing = SlaveInit(slave_Length);
 R0 = SlaveOrientation(jointPos);
 X0 = SlavePosition(jointPos);
 
-Rd = rotx(-60);
-Xd = X0;
+Rd = rotx(0);
+Xd = X0 + [0.01, 0, 0.4]';
 
 Rk_theta = Rd * R0';
 thetaf =  acos((Rk_theta(1,1) + Rk_theta(2,2) + Rk_theta(3,3) - 1 ) / 2);
 theta0 = 0;
 K_tmp = [Rk_theta(3,2)-Rk_theta(2,3);Rk_theta(1,3)-Rk_theta(3,1);Rk_theta(2,1)-Rk_theta(1,2)];
-K = K_tmp / (2*sin(thetaf));
+if thetaf == 0
+    K = [0 0 0]';
+else
+    K = K_tmp / (2*sin(thetaf));
+end
 
 %%%%%三次多项式插值%%%%
 TIME = 2;
-a0 = theta0;
-a1 = 0;
-a2 = 3/TIME^2 * (thetaf - theta0);
-a3 = -2/TIME^3 * (thetaf - theta0);
+interPara_CartX.a0 = X0(1);
+interPara_CartX.a1 = 0;
+interPara_CartX.a2 = 3/TIME^2 * (Xd(1) - X0(1));
+interPara_CartX.a3 = -2/TIME^3 * (Xd(1) - X0(1));
+interPara_CartY.a0 = X0(2);
+interPara_CartY.a1 = 0;
+interPara_CartY.a2 = 3/TIME^2 * (Xd(2) - X0(2));
+interPara_CartY.a3 = -2/TIME^3 * (Xd(2) - X0(2));
+interPara_CartZ.a0 = X0(3);
+interPara_CartZ.a1 = 0;
+interPara_CartZ.a2 = 3/TIME^2 * (Xd(3) - X0(3));
+interPara_CartZ.a3 = -2/TIME^3 * (Xd(3) - X0(3));
+interPara_Rot.a0 = theta0;
+interPara_Rot.a1 = 0;
+interPara_Rot.a2 = 3/TIME^2 * (thetaf - theta0);
+interPara_Rot.a3 = -2/TIME^3 * (thetaf - theta0);
+
 for i=1:1000
     
     t = i * 2/1000;
-    theta = a0 + a1 * t + a2 * t^2 + a3 * t^3;
-    theta_ = a1 + 2 * a2 * t + 3 * a3 * t^2;
+    theta = interPara_Rot.a0 + interPara_Rot.a1 * t + interPara_Rot.a2 * t^2 + interPara_Rot.a3 * t^3;
+    theta_ = interPara_Rot.a1 + 2 * interPara_Rot.a2 * t + 3 * interPara_Rot.a3 * t^2;
+    vx = interPara_CartX.a1 + 2 * interPara_CartX.a2 * t + 3 * interPara_CartX.a3 * t^2;
+    vy = interPara_CartY.a1 + 2 * interPara_CartY.a2 * t + 3 * interPara_CartY.a3 * t^2;
+    vz = interPara_CartZ.a1 + 2 * interPara_CartZ.a2 * t + 3 * interPara_CartZ.a3 * t^2;
     
     SlaveOrientation(jointPos);
     SlavePosition(jointPos);
     jacobian = SlaveDiffKinematics(0);
-    V = [ 0 0 0]';
+    V = [ vx vy vz]';
     W = theta_ * K;
     jointVel = pinv(jacobian) * [V;W];
     jointPos = jointVel * 2/1000 + jointPos;
