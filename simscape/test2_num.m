@@ -1,5 +1,8 @@
 clear
 clc
+% 先公式推导得到解析解
+% 再根据各关节位置、速度、加速度以及力矩反馈值辨识得到惯性参数
+
 % 正常连杆，具有质量和惯量，质心位置与几何中心重合（立方体连杆）
 syms m1 m2 len1 len2 g I1 I2
 syms q1 q2 dq1 dq2 ddq1 ddq2 
@@ -54,8 +57,10 @@ Y = [tau1_m1, tau1_m2, tau1_I1, tau1_I2;
         tau2_m1, tau2_m2, tau2_I1, tau2_I2];
 Y = simplify(Y);
 %% 数值求解，辨识惯性参数
+%{
 g = 9.8 ;len1= 0.5; len2 = 0.5;
 Y_num = [];
+tau_num = [];
 for i=1:length(tout)
     q1 = q1_num(i);
     q2 = q2_num(i);
@@ -80,17 +85,28 @@ for i=1:length(tout)
     tmpY = [Y11 Y12 Y13 Y14;
                   Y21 Y22 Y23 Y24];
     Y_num = [Y_num;tmpY];
+    tmp_tau = [tau1_num(i);tau2_num(i)];
+    tau_num = [tau_num;tmp_tau];    
 end
-tau_num = [tau1_num;tau2_num];
-p = inv(Y_num(2:end)'*Y_num(2:end))*Y_num(2:end)'*tau_num(2:end)
-
-%% matlab无法解算
+p = inv(Y_num(3:end,:)'*Y_num(3:end,:))*Y_num(3:end,:)'*tau_num(3:end)
+%}
+%% 根据Y矩阵表达式，利用最小二乘法求解得到惯性参数
+Y_num = [];
+tau_num = [];
+g = 9.8; len1 = 0.5; len2 = 0.5;
 for i=1:length(tout)
-    tmpY = subs(Y,{g,len1,len2,q1,q2,dq1,dq2,ddq1,ddq2},...
-                            {9.8,0.5,0.5,q1_num(i),q2_num(i),dq1_num(i),dq2_num(i),ddq1_num(i),ddq2_num(i)});
+    q1 = q1_num(i);
+    q2 = q2_num(i);
+    dq1 = dq1_num(i);
+    dq2 = dq2_num(i);
+    ddq1 = ddq1_num(i);
+    ddq2 = ddq2_num(i);
+    %eval函数将自变量用数值代替，并且将结果由sym->double
+    tmpY = eval(Y);
     Y_num = [Y_num;tmpY];
+    
+    tmp_tau = [tau1_num(i);tau2_num(i)];
+    tau_num = [tau_num;tmp_tau];        
 end
-tau_num = [tau1_num;tau2_num];
-
 %惯性参数
-p = inv(Y_num'*Y_num)*Y_num'*tau_num
+p = inv(Y_num(3:end,:)'*Y_num(3:end,:))*Y_num(3:end,:)'*tau_num(3:end)
