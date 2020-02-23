@@ -1,10 +1,11 @@
 clear
 clc
+% reference to test2.slx
 % 先公式推导得到解析解
-% 再根据各关节位置、速度、加速度以及力矩反馈值辨识得到惯性参数
+% 再根据各关节位置、�?度�?加�?度以及力矩反馈�?辨识得到惯�?参数
 
-% 正常连杆，具有质量和惯量，质心位置与几何中心重合（立方体连杆）
-syms m1 m2 len1 len2 g I1 I2
+% 正常连杆，具有质量和惯量，质心位置与几何中心重合（立方体连杆�?
+syms m1 m2 g I1 I2
 syms q1 q2 dq1 dq2 ddq1 ddq2 
 syms v1 v2 w1 w2
 syms x1(t) dx1 ddx1 x2(t) dx2 ddx2
@@ -12,6 +13,7 @@ syms x1(t) dx1 ddx1 x2(t) dx2 ddx2
 dx1=diff(x1,t); dx2=diff(x2,t);
 ddx1=diff(x1,t,t); ddx2=diff(x2,t,t);
 
+len1 = 0.5; len2 = 0.5;
 w1 = dx1; w2 = dx1+dx2;
 v1 = 0; v2 = v1+w1*len1;
 vc1 = v1+w1*len1/2;
@@ -44,7 +46,7 @@ dEdq2 = diff(E,q2);
 tau1 = dEddq1dt - dEdq1;
 tau2 = dEddq2dt - dEdq2;
 %% 化为矩阵形式
-%%coeffs(a*x^3+2*x+1,x,'All')，能够提取出为零的系数
+%%coeffs(a*x^3+2*x+1,x,'All')，能够提取出为零的系�?
 tau1_m1 = diff(tau1,m1);
 tau1_m2 = diff(tau1,m2);
 tau1_I1 = diff(tau1,I1);
@@ -56,7 +58,7 @@ tau2_I2 = diff(tau2,I2);
 Y = [tau1_m1, tau1_m2, tau1_I1, tau1_I2;
         tau2_m1, tau2_m2, tau2_I1, tau2_I2];
 Y = simplify(Y);
-%% 数值求解，辨识惯性参数
+%% 数�?求解，辨识惯性参�?
 %{
 g = 9.8 ;len1= 0.5; len2 = 0.5;
 Y_num = [];
@@ -90,7 +92,7 @@ for i=1:length(tout)
 end
 p = inv(Y_num(3:end,:)'*Y_num(3:end,:))*Y_num(3:end,:)'*tau_num(3:end)
 %}
-%% 根据Y矩阵表达式，利用最小二乘法求解得到惯性参数
+%% 根据Y矩阵表达式，利用�?��二乘法求解得到惯性参�?
 Y_num = [];
 tau_num = [];
 g = 9.8; len1 = 0.5; len2 = 0.5;
@@ -108,5 +110,5 @@ for i=1:length(tout)
     tmp_tau = [tau1_num(i);tau2_num(i)];
     tau_num = [tau_num;tmp_tau];        
 end
-%惯性参数
+%惯�?参数
 p = inv(Y_num(3:end,:)'*Y_num(3:end,:))*Y_num(3:end,:)'*tau_num(3:end)
